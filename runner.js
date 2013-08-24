@@ -89,9 +89,7 @@ function run(path) {
   var files = fs.readdirSync(path);
   var paths = _.map(files, function(s){ return p.join(path, s); });
 
-  _.each(_.filter(paths, isExistingDirectory), function(repoPath) {
-    update(repoPath);
-  });
+  _.each(_.filter(paths, isExistingDirectory), update);
 }
 
 run(fs.realpathSync(process.argv[2]));
