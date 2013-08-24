@@ -30,16 +30,56 @@ function announceRoot(path) {
   }
 }
 
-function update(repoPath) {
-  var git = spawn("git", ["pull"], {cwd: repoPath, env: process.env});
+function detectVCS(repoPath) {
+  var dotGit = p.join(repoPath, ".git");
+  var dotHg  = p.join(repoPath, ".hg");
 
-  git.stderr.on('data', function (data) {
+  if(isExistingDirectory(dotGit)) {
+    return "git";
+  }
+
+  if(isExistingDirectory(dotHg)) {
+    return "hg";
+  }
+
+  return null;
+}
+
+function spawnUpdateProcess(vcs, repoPath) {
+  var args;
+  switch(vcs) {
+    case "git":
+      args = ["pull"];
+      break;
+    case "hg":
+      args = ["fetch"];
+      break;
+  }
+
+  return spawn(vcs, args, {cwd: repoPath, env: process.env});
+}
+
+function update(repoPath) {
+  var rt   = detectVCS(repoPath);
+  if(rt === null) {
+    return null;
+  }
+
+  var proc = spawnUpdateProcess(rt, repoPath);
+
+  proc.stderr.on('data', function (data) {
     console.log('stderr (' + repoPath + "): " + data);
   });
 
-  git.on('close', function (code) {
+  proc.on('close', function (code) {
     u.puts(u.format("Updated %s, exit code: %d", repoPath, code));
   });
+
+  proc.on('error', function (err) {
+    u.puts(u.format("Repo path: %s, error: %s", repoPath, err));
+  });
+
+  return proc;
 }
 
 function run(path) {
